@@ -13,7 +13,7 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
-HOST = "127.0.0.1"
+HOST = os.environ.get("HOST", "127.0.0.1")
 PORT = int(os.environ.get("PORT", "8765"))
 MAX_BODY_BYTES = 80_000
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
