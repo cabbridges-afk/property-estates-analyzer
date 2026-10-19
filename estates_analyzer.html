@@ -1,0 +1,1033 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Present &amp; Future Estates Analyzer</title>
+<style>
+  :root {
+    --ink: #1c1917;
+    --muted: #6b655f;
+    --line: #e2ddd6;
+    --accent: #6d4c2f;
+    --accent-soft: #f5efe7;
+    --present: #1a7f5a;
+    --future: #2563a8;
+    --grantor: #8a5a1b;
+    --warn-bg: #fff8e6;
+    --warn-line: #e0a93c;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: Georgia, 'Iowan Old Style', 'Times New Roman', serif;
+    background: #f7f5f1;
+    color: var(--ink);
+    line-height: 1.55;
+    padding: 24px 16px 64px;
+  }
+  .wrap { max-width: 980px; margin: 0 auto; }
+  header { border-bottom: 3px double var(--accent); padding-bottom: 16px; margin-bottom: 24px; }
+  h1 { font-size: 1.9rem; letter-spacing: -0.01em; }
+  header p { color: var(--muted); font-size: 0.95rem; margin-top: 6px; }
+  .panel {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 20px;
+    margin-bottom: 20px;
+  }
+  label { display: block; font-weight: bold; font-size: 0.9rem; margin-bottom: 6px; }
+  .row { display: flex; gap: 16px; flex-wrap: wrap; }
+  .row > div:first-child { flex: 0 0 180px; }
+  .row > div:last-child { flex: 1 1 400px; }
+  input[type=text], textarea {
+    width: 100%;
+    font: inherit;
+    font-size: 1rem;
+    padding: 10px 12px;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    background: #fdfcfa;
+  }
+  textarea { min-height: 86px; resize: vertical; }
+  input:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+  .actions { display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
+  button {
+    font: inherit;
+    font-size: 0.95rem;
+    padding: 9px 18px;
+    border-radius: 4px;
+    border: 1px solid var(--accent);
+    background: var(--accent);
+    color: #fff;
+    cursor: pointer;
+  }
+  button.secondary { background: #fff; color: var(--accent); }
+  button:hover { filter: brightness(1.08); }
+  .examples { margin-top: 16px; font-size: 0.9rem; }
+  .examples h3 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin-bottom: 8px; }
+  .ex {
+    display: block; width: 100%; text-align: left;
+    background: var(--accent-soft); color: var(--ink); border: 1px solid var(--line);
+    padding: 7px 10px; margin-bottom: 6px; border-radius: 4px; font-size: 0.9rem;
+  }
+  .card {
+    border: 1px solid var(--line);
+    border-left: 5px solid var(--line);
+    border-radius: 5px;
+    padding: 16px 18px;
+    margin-bottom: 14px;
+    background: #fff;
+  }
+  .card.present { border-left-color: var(--present); }
+  .card.future  { border-left-color: var(--future); }
+  .card.grantor { border-left-color: var(--grantor); }
+  .card h3 { font-size: 1.15rem; }
+  .card .kind { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+  .label { font-size: 1.02rem; font-weight: bold; color: var(--accent); margin: 4px 0 10px; }
+  .why { font-size: 0.92rem; }
+  .why ul { margin: 6px 0 0 20px; }
+  .why li { margin-bottom: 4px; }
+  .meta { font-size: 0.88rem; color: var(--muted); margin-top: 10px; }
+  .chip {
+    display: inline-block; font-family: -apple-system, system-ui, sans-serif; font-size: 0.72rem;
+    padding: 2px 8px; border-radius: 10px; margin: 4px 5px 0 0; border: 1px solid var(--line);
+    background: #faf8f5; color: var(--muted);
+  }
+  .chip.cond { background: #eef4fb; color: #2563a8; border-color: #cfe0f2; }
+  .chip.time { background: #fff4e3; color: #9a6210; border-color: #f0dcb8; }
+  .chip.neg  { background: #fdeeee; color: #a33; border-color: #f2d2d2; }
+  .note { background: var(--warn-bg); border-left: 4px solid var(--warn-line); padding: 10px 12px; margin-top: 10px; font-size: 0.88rem; }
+  .err { background: #fdeeee; border-left: 4px solid #c33; padding: 12px 14px; color: #902; }
+  .timeline { font-size: 0.95rem; background: var(--accent-soft); border-radius: 4px; padding: 12px 14px; }
+  details { margin-top: 14px; font-size: 0.88rem; }
+  summary { cursor: pointer; color: var(--accent); font-weight: bold; }
+  pre { font-family: ui-monospace, Menlo, monospace; font-size: 0.78rem; background: #fbfaf8; border: 1px solid var(--line); padding: 10px; border-radius: 4px; overflow-x: auto; margin-top: 8px; }
+  .hidden { display: none; }
+  .legend { font-size: 0.85rem; color: var(--muted); }
+  .legend code { font-family: ui-monospace, Menlo, monospace; background: var(--accent-soft); padding: 1px 4px; border-radius: 3px; }
+  .legend li { margin-bottom: 3px; }
+  .legend ul { margin-left: 20px; margin-top: 6px; }
+  table.tests { border-collapse: collapse; width: 100%; font-size: 0.82rem; margin-top: 10px; }
+  table.tests td, table.tests th { border: 1px solid var(--line); padding: 6px 8px; text-align: left; vertical-align: top; }
+  .pass { color: var(--present); font-weight: bold; }
+  .fail { color: #c33; font-weight: bold; }
+  .ai-panel { border-top: 4px solid #6d4c2f; }
+  .ai-panel h2 { font-size: 1.2rem; margin-bottom: 8px; }
+  .ai-status { color: var(--muted); font-size: 0.9rem; margin-bottom: 12px; }
+  .memo-conclusion { font-weight: bold; color: var(--accent); margin-bottom: 8px; }
+  .case-list { display: grid; gap: 10px; margin-top: 12px; }
+  .case { border: 1px solid var(--line); border-radius: 4px; padding: 12px; background: #fdfcfa; }
+  .case a { color: #1f5e91; font-weight: bold; }
+  .case .case-meta { font-size: 0.82rem; color: var(--muted); margin: 3px 0 7px; }
+  .case .case-snippet { font-size: 0.88rem; }
+  .loading { color: var(--muted); font-style: italic; }
+  footer { font-size: 0.82rem; color: var(--muted); text-align: center; margin-top: 30px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Present &amp; Future Estates Analyzer</h1>
+    <p>A deterministic if/then rule engine for classifying present possessory estates and future interests in a conveyance. No AI, no guessing &mdash; the same input always produces the same output.</p>
+  </header>
+
+  <div class="panel">
+    <div class="row">
+      <div>
+        <label for="grantor">Grantor (optional)</label>
+        <input type="text" id="grantor" placeholder="O" value="O">
+      </div>
+      <div>
+        <label for="deed">Conveyance</label>
+        <textarea id="deed" placeholder="O to A for life, then to B and her heirs, but if B drinks alcohol, to C.">O to A for life, then to B and her heirs, but if B drinks alcohol, to C.</textarea>
+      </div>
+    </div>
+    <div class="actions">
+      <button onclick="runAnalysis()">Analyze</button>
+      <button class="secondary" onclick="clearAll()">Clear</button>
+      <button class="secondary" onclick="toggleTests()">Run self-tests</button>
+    </div>
+
+    <div class="examples">
+      <h3>Click to load an example</h3>
+      <div id="exampleList"></div>
+    </div>
+  </div>
+
+  <div id="out"></div>
+  <div id="rapOut"></div>
+
+  <div id="testPanel" class="panel hidden">
+    <h3>Built-in regression tests</h3>
+    <div id="testResults"></div>
+  </div>
+
+  <div class="panel legend">
+    <h3 style="font-size:0.85rem;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px;">Grammar the engine understands</h3>
+    <ul>
+      <li><code>to A for life</code> / <code>to A for the life of B</code> / <code>to A for 10 years</code> &rarr; duration of the estate</li>
+      <li><code>to A</code> / <code>to A and his heirs</code> / <code>to A in fee simple</code> &rarr; fee simple</li>
+      <li><strong>Durational words</strong> (<code>so long as</code>, <code>while</code>, <code>until</code>, <code>during</code>) &rarr; determinable / automatic cut-off</li>
+      <li><strong>Condition-subsequent words</strong> (<code>but if</code>, <code>provided that</code>, <code>on condition that</code>, <code>unless</code>, <code>however, if</code>) &rarr; cut short by exercise of a power or by a gift over</li>
+      <li><strong>Condition precedent</strong>: a bare <code>if / when / upon / after</code> attached to a gift with <em>no</em> comma (<code>then to B if B reaches 21</code>)</li>
+      <li><strong>Gift over</strong>: <code>, to C</code> / <code>, then to C</code> / <code>, in which case to C</code>, or a reversionary clause such as <code>O may re-enter</code></li>
+      <li><strong>Chained conditions</strong>: <code>and</code>, <code>or</code>, <code>and if</code>, <code>or if</code> &rarr; parsed into an AND/OR tree</li>
+      <li><strong>Negative conditions</strong>: <code>not</code>, <code>never</code>, <code>fails to</code>, <code>ceases to</code>, <code>no longer</code>, <code>unless</code></li>
+      <li><strong>Time conditions</strong>: <code>age 21</code>, <code>reaches/turns/attains</code>, <code>survives</code>, <code>upon A's death</code>, <code>five years after</code> (a gap creates a springing interest)</li>
+    </ul>
+    <p style="margin-top:10px;">Punctuation matters, exactly as it does on an exam: the engine uses the comma rule to separate a condition precedent from a condition subsequent.</p>
+  </div>
+
+  <footer>Study aid only. Applies common-law classification; does not apply modern statutory abolitions, the Rule in Shelley's Case, or the Doctrine of Worthier Title.</footer>
+</div>
+
+<script>
+/* ===== ENGINE START ===== */
+
+/* ------------------------------------------------------------------ *
+ * 1. LEXICON — every token the parser recognises, in priority order.  *
+ * ------------------------------------------------------------------ */
+
+var PARTY_LOOKAHEAD = "(?=[A-Z]|his\\s|her\\s|their\\s|my\\s|the\\s+(?:[A-Z]|heirs|children|issue|descendants|grandchildren|survivors?|widow|widower|spouse|first|eldest|oldest|youngest))";
+
+var GAP_PHRASE = ",?\\s*(?:and\\s+)?(?:then\\s+)?(?:\\d+|one|two|three|four|five|six|seven|eight|nine|ten|twenty)\\s+(?:year|month|day|week)s?\\s+(?:after|following|from)\\s+";
+
+var CONNECTORS = [
+  // --- gap in possession (must be tested before the bare "after" condition) ---
+  { re: GAP_PHRASE, type: "GAP" },
+
+  // --- takers (words of purchase) ---
+  { re: ",?\\s*\\bin\\s+which\\s+case,?\\s+to\\s+" + PARTY_LOOKAHEAD, type: "TAKER", marker: "in which case to" },
+  { re: ",?\\s*\\band\\s+then\\s+to\\s+" + PARTY_LOOKAHEAD,            type: "TAKER", marker: "then to" },
+  { re: ",?\\s*\\bthen\\s+over\\s+to\\s+" + PARTY_LOOKAHEAD,           type: "TAKER", marker: "then to" },
+  { re: ",?\\s*\\bthen\\s+to\\s+" + PARTY_LOOKAHEAD,                   type: "TAKER", marker: "then to" },
+  { re: ",?\\s*\\bremainder\\s+to\\s+" + PARTY_LOOKAHEAD,              type: "TAKER", marker: "then to" },
+  { re: ",?\\s*\\band\\s+to\\s+" + PARTY_LOOKAHEAD,                    type: "TAKER", marker: "to" },
+  { re: ",?\\s*\\bto\\s+" + PARTY_LOOKAHEAD,                           type: "TAKER", marker: "to" },
+
+  // --- conditions subsequent (defeasance by condition) ---
+  { re: ",?\\s*\\bbut\\s+if\\b",                                        type: "COND", kind: "subsequent" },
+  { re: ",?\\s*\\bhowever,?\\s+if\\b",                                  type: "COND", kind: "subsequent" },
+  { re: ",?\\s*\\bprovided,?\\s*(?:however,?\\s*)?that\\b",             type: "COND", kind: "subsequent" },
+  { re: ",?\\s*\\bon\\s+condition\\s+that\\b",                          type: "COND", kind: "subsequent" },
+  { re: ",?\\s*\\bsubject\\s+to\\s+the\\s+condition\\s+that\\b",        type: "COND", kind: "subsequent" },
+  { re: ",?\\s*\\bunless\\b",                                           type: "COND", kind: "subsequent", negWord: true },
+
+  // --- durational limitations (determinable) ---
+  { re: ",?\\s*\\b(?:so|as)\\s+long\\s+as\\b",                          type: "COND", kind: "durational" },
+  { re: ",?\\s*\\bwhile\\b",                                            type: "COND", kind: "durational" },
+  { re: ",?\\s*\\buntil\\b",                                            type: "COND", kind: "durational" },
+  { re: ",?\\s*\\bduring\\b",                                           type: "COND", kind: "durational" },
+
+  // --- chained conditions ---
+  { re: ",?\\s*\\band\\s+if\\b",                                        type: "CHAIN", op: "AND" },
+  { re: ",?\\s*\\bor\\s+if\\b",                                         type: "CHAIN", op: "OR" },
+
+  // --- ambiguous: precedent or subsequent decided by the comma rule ---
+  { re: ",?\\s*\\bif\\b",                                               type: "COND", kind: "auto" },
+  { re: ",?\\s*\\bas\\s+soon\\s+as\\b",                                 type: "COND", kind: "auto" },
+  { re: ",?\\s*\\bwhen(?:ever)?\\b",                                    type: "COND", kind: "auto" },
+  { re: ",?\\s*\\bupon\\b",                                             type: "COND", kind: "auto" },
+  { re: ",?\\s*\\bafter\\b",                                            type: "COND", kind: "auto" }
+];
+
+var MASTER_RE = new RegExp(CONNECTORS.map(function (c) { return "(" + c.re + ")"; }).join("|"), "g");
+
+var NEGATIVE_RE = /\b(not|never|no longer|fails? to|failed to|ceases? to|ceased to|stops?|stopped|without|neither)\b/i;
+var TIME_RE     = /\b(age|aged|turns?|reach(?:es|ed)?|attains?|survives?|survive|outlives?|death|dies|died|years?|months?|days?|birthday|graduat\w*|marri\w*|remarri\w*)\b/i;
+var GAP_RE      = /\b(?:\d+|one|two|three|four|five|six|seven|eight|nine|ten|twenty)\s+(?:year|month|day|week)s?\s+(?:after|following|from)\b/i;
+var REENTRY_RE  = /,?\s*(?:and\s+)?(?:then\s+)?(?:[A-Z][\w'’]*|the\s+grantor|the\s+estate)?\s*(?:may|shall\s+have\s+the\s+right\s+to|can)\s+(?:re-?enter|re-?entry|retake|terminate)[\w\s]*/i;
+var CLASS_RE    = /\b(children|child|issue|descendants|grandchildren|heirs|widow|widower|spouse|survivors?|nephews?|nieces?)\b/i;
+
+/* ------------------------------------------------------------------ *
+ * 2. PARSER — conveyance text -> ordered list of takers + conditions. *
+ * ------------------------------------------------------------------ */
+
+// Reserved grammar words are lower-cased wherever they appear so that a
+// sentence-initial "To A for life" parses exactly like "to A for life".
+// Party names are never in this list, so capitalisation cues are preserved.
+var RESERVED_RE = /\b(To|Then|But|If|Unless|While|Until|During|Provided|Upon|When|Whenever|After|However|And|Or|For|So|As|On|Remainder|In)\b/g;
+
+function normalize(raw) {
+  return String(raw || "")
+    .replace(/[\u201c\u201d]/g, '"')
+    .replace(/[\u2019]/g, "'")
+    .replace(/\s+/g, " ")
+    .replace(/\s*\.\s*$/, "")
+    .replace(RESERVED_RE, function (m) { return m.toLowerCase(); })
+    .trim();
+}
+
+function safeText(value) {
+  return document.createTextNode(String(value || ""));
+}
+
+function addText(el, value) {
+  el.appendChild(safeText(value));
+}
+
+function makeNode(tag, className, text) {
+  var el = document.createElement(tag);
+  if (className) el.className = className;
+  if (text) addText(el, text);
+  return el;
+}
+
+async function requestRapResearch(hypothetical, analysis) {
+  var container = document.getElementById("rapOut");
+  container.innerHTML = '<div class="panel ai-panel"><h2>AI RAP analysis &amp; analogous cases</h2><p class="loading">Checking common-law RAP and CourtListener opinions…</p></div>';
+  try {
+    var response = await fetch("/api/analyze-rap", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ hypothetical: hypothetical, classification: analysis.interests })
+    });
+    var payload = await response.json();
+    if (!response.ok) throw new Error(payload.error || "Research request failed.");
+    renderRapResearch(payload);
+  } catch (error) {
+    container.innerHTML = '<div class="panel ai-panel"><h2>AI RAP analysis &amp; analogous cases</h2><p class="err">Research is unavailable. Start the local server with <code>python3 rap_server.py</code>; see README.txt for setup.</p></div>';
+  }
+}
+
+function renderRapResearch(payload) {
+  var container = document.getElementById("rapOut");
+  container.innerHTML = "";
+  var panel = makeNode("section", "panel ai-panel");
+  panel.appendChild(makeNode("h2", "", "AI RAP analysis & analogous cases"));
+  panel.appendChild(makeNode("p", "ai-status", "AI output is a study aid. It does not change the deterministic estate analysis above."));
+
+  if (payload.memo) {
+    panel.appendChild(makeNode("p", "memo-conclusion", "Common-law RAP assessment: " + payload.memo.conclusion));
+    panel.appendChild(makeNode("p", "", payload.memo.summary));
+    if (payload.memo.interests && payload.memo.interests.length) {
+      var ul = document.createElement("ul");
+      payload.memo.interests.forEach(function (item) {
+        var li = document.createElement("li");
+        addText(li, (item.interest || "Interest") + " — " + (item.rap_status || "fact-dependent") + ": " + (item.reason || ""));
+        ul.appendChild(li);
+      });
+      panel.appendChild(ul);
+    }
+    if (payload.memo.assumptions && payload.memo.assumptions.length) {
+      panel.appendChild(makeNode("p", "meta", "Assumptions: " + payload.memo.assumptions.join(" • ")));
+    }
+    if (payload.memo.study_note) panel.appendChild(makeNode("p", "note", payload.memo.study_note));
+  } else {
+    panel.appendChild(makeNode("p", "note", payload.ai_error || "No AI memorandum was returned."));
+  }
+
+  panel.appendChild(makeNode("h3", "", "Potentially analogous CourtListener opinions"));
+  if (payload.case_error) panel.appendChild(makeNode("p", "note", payload.case_error));
+  if (payload.cases && payload.cases.length) {
+    var list = makeNode("div", "case-list");
+    payload.cases.forEach(function (item) {
+      var card = makeNode("article", "case");
+      var link = document.createElement("a");
+      link.href = item.url;
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+      addText(link, item.name);
+      card.appendChild(link);
+      card.appendChild(makeNode("div", "case-meta", [item.citation, item.court, item.date].filter(Boolean).join(" · ")));
+      if (item.snippet) card.appendChild(makeNode("p", "case-snippet", item.snippet));
+      list.appendChild(card);
+    });
+    panel.appendChild(list);
+  } else {
+    panel.appendChild(makeNode("p", "meta", "No analogous published opinion was returned for this query."));
+  }
+  panel.appendChild(makeNode("p", "meta", "Search terms sent to CourtListener: " + (payload.search_query || "unavailable")));
+  container.appendChild(panel);
+}
+
+function matchedConnector(match) {
+  for (var i = 1; i < match.length; i++) {
+    if (match[i] !== undefined) return CONNECTORS[i - 1];
+  }
+  return null;
+}
+
+function segment(text) {
+  MASTER_RE.lastIndex = 0;
+  var segs = [];
+  var m, hits = [];
+  while ((m = MASTER_RE.exec(text)) !== null) {
+    hits.push({ index: m.index, length: m[0].length, raw: m[0], spec: matchedConnector(m) });
+    if (m[0].length === 0) MASTER_RE.lastIndex++;
+  }
+  var preamble = (hits.length ? text.slice(0, hits[0].index) : text).trim();
+  for (var i = 0; i < hits.length; i++) {
+    var h = hits[i];
+    var end = (i + 1 < hits.length) ? hits[i + 1].index : text.length;
+    segs.push({
+      spec: h.spec,
+      hasComma: /^\s*,/.test(h.raw),
+      connector: h.raw.trim(),
+      text: text.slice(h.index + h.length, end).replace(/^[\s,;]+|[\s,;]+$/g, "")
+    });
+  }
+  return { preamble: preamble, segs: segs };
+}
+
+function parseTakerClause(payload) {
+  var stop = /\s+for\s+life\b|\s+for\s+the\s+life\s+of\b|\s+for\s+(?:a\s+term\s+of\s+)?(?:\d+|\w+)\s+(?:year|month)s?\b|\s+and\s+(?:his|her|its|their)\s+heirs\b|\s+in\s+fee(?:\s+simple)?\b|[,;]/i;
+  var cut = payload.search(stop);
+  var party = (cut === -1 ? payload : payload.slice(0, cut)).trim();
+  party = party.replace(/^(?:and\s+)?/i, "").replace(/[,;.]+$/, "").trim();
+
+  var duration = "fee", durationLabel = "fee simple";
+  if (/\bfor\s+the\s+life\s+of\b/i.test(payload)) { duration = "life"; durationLabel = "life estate pur autre vie"; }
+  else if (/\bfor\s+life\b/i.test(payload))       { duration = "life"; durationLabel = "life estate"; }
+  else if (/\bfor\s+(?:a\s+term\s+of\s+)?(?:\d+|\w+)\s+(?:year|month)s?\b/i.test(payload)) { duration = "years"; durationLabel = "term of years"; }
+
+  return {
+    party: party,
+    duration: duration,
+    durationLabel: durationLabel,
+    wordsOfLimitation: /\band\s+(?:his|her|its|their)\s+heirs\b/i.test(payload) || /\bin\s+fee\b/i.test(payload),
+    isClass: CLASS_RE.test(party),
+    isHeirsOrIssue: /\b(?:'s|s')\s*(?:heirs|issue)\b/i.test(party) || /^heirs\s+of\b/i.test(party) || /\bheirs\s+of\b/i.test(party),
+    conditions: [],
+    raw: payload
+  };
+}
+
+function buildConditionTree(text) {
+  var t = text.trim();
+  var orParts = splitTop(t, /\s+\bor\b\s+/i);
+  if (orParts.length > 1) return { op: "OR", operands: orParts.map(buildConditionTree) };
+  var andParts = splitTop(t, /\s+\band\b\s+/i);
+  if (andParts.length > 1) return { op: "AND", operands: andParts.map(buildConditionTree) };
+  return { op: "LEAF", text: t };
+}
+
+function splitTop(text, re) {
+  var parts = text.split(re).map(function (s) { return s.trim(); }).filter(Boolean);
+  return parts;
+}
+
+function describeTree(tree) {
+  if (!tree) return "";
+  if (tree.op === "LEAF") return tree.text;
+  return tree.operands.map(function (o) {
+    return o.op === "LEAF" ? o.text : "(" + describeTree(o) + ")";
+  }).join(" " + tree.op + " ");
+}
+
+function makeCondition(kind, payload, connector, negWord) {
+  var text = payload;
+  var reentry = false;
+  var rm = text.match(REENTRY_RE);
+  if (rm) { reentry = true; text = text.replace(REENTRY_RE, "").trim(); }
+  text = text.replace(/^[\s,;]+|[\s,;.]+$/g, "");
+  var full = (negWord ? "unless " : "") + text;
+  return {
+    kind: kind,                       // durational | subsequent | precedent
+    trigger: connector,
+    text: text,
+    tree: buildConditionTree(text),
+    negative: negWord === true || NEGATIVE_RE.test(text),
+    timeBased: TIME_RE.test(text) || GAP_RE.test(text),
+    gap: GAP_RE.test(text),
+    reentry: reentry,
+    giftOverTo: null,
+    display: full
+  };
+}
+
+function parseConveyance(raw, grantorField) {
+  var text = normalize(raw);
+  if (!text) throw new Error("Enter a conveyance, e.g. \u201cO to A for life, then to B and her heirs.\u201d");
+
+  var parsed = segment(text);
+  var grantor = (grantorField || "").trim();
+  if (!grantor) {
+    var pm = parsed.preamble.match(/^([A-Z][\w'’\-]*)/);
+    grantor = pm ? pm[1] : "O";
+  }
+
+  var takers = [];
+  var pending = null;     // condition awaiting a gift over
+  var pendingGap = null;  // "five years after X" — gap in seisin before the next gift
+  var trace = [];
+  var warnings = [];
+
+  function lastTaker() { return takers.length ? takers[takers.length - 1] : null; }
+
+  parsed.segs.forEach(function (seg) {
+    var spec = seg.spec;
+
+    if (spec.type === "GAP") {
+      pendingGap = seg.connector.replace(/^[\s,]*(?:and\s+)?(?:then\s+)?/i, "") + seg.text;
+      trace.push({ step: "GAP", phrase: pendingGap });
+      return;
+    }
+
+    if (spec.type === "TAKER") {
+      var t = parseTakerClause(seg.text);
+      if (!t.party) { warnings.push("Could not read a party name after \u201c" + seg.connector + "\u201d."); return; }
+
+      if (pendingGap) {
+        t.gapAfter = pendingGap;
+        pendingGap = null;
+        t.role = takers.length === 0 ? "initial" : "successive";
+        takers.push(t);
+        trace.push({ step: "TAKER", connector: seg.connector, party: t.party, duration: t.durationLabel, role: t.role, gap: t.gapAfter });
+        return;
+      }
+
+      if (pending && !pending.giftOverTo) {
+        pending.giftOverTo = t.party;
+        t.role = "giftOver";
+        t.divests = takers.length - 1;
+        t.condition = pending;
+        pending = null;
+      } else {
+        t.role = takers.length === 0 ? "initial" : "successive";
+      }
+      takers.push(t);
+      trace.push({ step: "TAKER", connector: seg.connector, party: t.party, duration: t.durationLabel, role: t.role });
+      return;
+    }
+
+    if (spec.type === "CHAIN") {
+      var host = pending || (lastTaker() && lastTaker().conditions[lastTaker().conditions.length - 1]);
+      if (host) {
+        host.tree = { op: spec.op, operands: [host.tree, buildConditionTree(seg.text)] };
+        host.text = describeTree(host.tree);
+        host.display = host.text;
+        host.negative = host.negative || NEGATIVE_RE.test(seg.text);
+        host.timeBased = host.timeBased || TIME_RE.test(seg.text);
+        trace.push({ step: "CHAIN", connector: seg.connector, into: host.text });
+      }
+      return;
+    }
+
+    // COND
+    var owner = lastTaker();
+    if (!owner) { warnings.push("A condition appeared before any gift: \u201c" + seg.text + "\u201d."); return; }
+
+    var kind = spec.kind;
+    if (kind === "auto") kind = seg.hasComma ? "subsequent" : "precedent";
+
+    // "to A during his life" is duration, not a condition.
+    if (kind === "durational" && /^(?:his|her|their|[A-Z][\w'’]*(?:'s|s'))\s+(?:life|lifetime)$/i.test(seg.text)) {
+      owner.duration = "life";
+      owner.durationLabel = "life estate";
+      trace.push({ step: "DURATION", connector: seg.connector, party: owner.party, result: "life estate" });
+      return;
+    }
+
+    var cond = makeCondition(kind, seg.text, seg.connector, spec.negWord);
+    cond.owner = owner.party;
+    owner.conditions.push(cond);
+    trace.push({ step: "CONDITION", connector: seg.connector, kind: kind, owner: owner.party, text: cond.text, negative: cond.negative, timeBased: cond.timeBased });
+
+    if (kind !== "precedent") pending = cond;        // a gift over may follow
+    if (cond.reentry) { cond.giftOverTo = grantor; pending = null; }
+  });
+
+  if (!takers.length) throw new Error("No gift found. Use the form \u201cto [Party] \u2026\u201d.");
+
+  return { grantor: grantor, takers: takers, trace: trace, warnings: warnings, text: text };
+}
+
+/* ------------------------------------------------------------------ *
+ * 3. RULE ENGINE — classify each interest with explicit if/then rules *
+ * ------------------------------------------------------------------ */
+
+function firstDefeasance(t) {
+  for (var i = 0; i < t.conditions.length; i++) {
+    if (t.conditions[i].kind !== "precedent") return t.conditions[i];
+  }
+  return null;
+}
+function precedentCondition(t) {
+  for (var i = 0; i < t.conditions.length; i++) {
+    if (t.conditions[i].kind === "precedent") return t.conditions[i];
+  }
+  return null;
+}
+function isNaturalTermination(cond, priorTaker) {
+  if (!cond || !priorTaker) return false;
+  if (!/\b(death|dies|die)\b/i.test(cond.text)) return false;
+  if (cond.gap) return false;
+  var name = priorTaker.party.replace(/[^\w]/g, "");
+  var re = new RegExp("\\b" + name + "(?:'s|s')?\\b", "i");
+  return re.test(cond.text) || /\bthe\s+(?:life\s+tenant|prior\s+holder)\b/i.test(cond.text);
+}
+
+function classify(parsed) {
+  var g = parsed.grantor;
+  var takers = parsed.takers;
+  var mainLine = takers.filter(function (t) { return t.role !== "giftOver"; });
+  var interests = [];
+  var notes = parsed.warnings.slice();
+  var grantorRetains = [];
+
+  mainLine.forEach(function (t, idx) {
+    var prior = idx > 0 ? mainLine[idx - 1] : null;
+    var def = firstDefeasance(t);
+    var pre = precedentCondition(t);
+    var giftOver = def && def.giftOverTo ? def.giftOverTo : null;
+    var giftOverToGrantor = giftOver && giftOver.toLowerCase() === g.toLowerCase();
+    var rules = [];
+    var label, category, defeasance = null;
+
+    // ---------- present possessory estate ----------
+    if (idx === 0) {
+      if (pre && !isNaturalTermination(pre, null)) {
+        // Nothing passes now: the grantor keeps possession and is divested later.
+        label = "Springing Executory Interest" + (t.duration === "life" ? " (in a life estate)" : " in Fee Simple");
+        category = "future";
+        rules.push("IF the very first gift is subject to a condition precedent THEN nothing passes to the taker now, so the interest cannot be a remainder (no prior freehold was created).");
+        rules.push("IF a future interest will cut short the GRANTOR's own retained estate THEN it is a springing executory interest.");
+        defeasance = "Fails entirely if the condition never occurs.";
+        grantorRetains.push({
+          label: "Fee Simple Subject to Executory Limitation (present possession)",
+          rules: [
+            "IF the grantor conveys subject to a condition precedent THEN the grantor retains present possession.",
+            "IF that possession will automatically shift to the grantee when the condition occurs THEN the grantor holds a fee simple subject to an executory limitation."
+          ],
+          category: "grantor",
+          conditions: [pre]
+        });
+        interests.push(mk(t.party, label, category, rules, t.conditions, defeasance));
+        return;
+      }
+
+      if (t.duration === "life") {
+        label = t.durationLabel === "life estate pur autre vie" ? "Life Estate Pur Autre Vie" : "Life Estate";
+        rules.push("IF the gift is measured by a life (\u201cfor life\u201d / \u201cfor the life of X\u201d) THEN the taker has a present possessory life estate.");
+        if (def) {
+          if (giftOver && !giftOverToGrantor) {
+            label += " Subject to Executory Limitation";
+            rules.push("IF a life estate can be cut short before its natural end by a condition that shifts possession to a THIRD PARTY THEN it is a life estate subject to an executory limitation.");
+          } else if (def.kind === "durational") {
+            label += " Determinable";
+            rules.push("IF durational words (\u201c" + def.trigger + "\u201d) limit a life estate and the property returns to the grantor THEN it is a life estate determinable.");
+          } else {
+            label += " Subject to Condition Subsequent";
+            rules.push("IF conditional words (\u201c" + def.trigger + "\u201d) let the grantor cut the estate short THEN it is a life estate subject to a condition subsequent.");
+          }
+          defeasance = "Cut short early if " + def.display + ".";
+        }
+        category = "present";
+        interests.push(mk(t.party, label, category, rules, t.conditions, defeasance || "Ends naturally at the measuring life's death."));
+        return;
+      }
+
+      if (t.duration === "years") {
+        label = "Term of Years";
+        rules.push("IF the gift is for a fixed period THEN the taker has a present possessory term of years (a non-freehold estate).");
+        interests.push(mk(t.party, label, "present", rules, t.conditions, "Ends automatically when the term expires."));
+        return;
+      }
+
+      // fee simple branch
+      if (!def) {
+        label = "Fee Simple Absolute";
+        rules.push("IF a fee is granted (\u201cto " + t.party + (t.wordsOfLimitation ? " and his/her heirs" : "") + "\u201d) AND no condition or durational limit attaches THEN the taker has a fee simple absolute.");
+        rules.push("IF the taker holds a fee simple absolute THEN no future interest exists in anyone.");
+        interests.push(mk(t.party, label, "present", rules, t.conditions, "Nothing \u2014 the estate is of infinite duration and cannot be divested."));
+        return;
+      }
+      if (giftOver && !giftOverToGrantor) {
+        label = "Fee Simple Subject to Executory Limitation";
+        rules.push("IF a fee is cut short by a condition AND the property then passes to a THIRD PARTY rather than back to the grantor THEN the present estate is a fee simple subject to an executory limitation (a defeasible fee).");
+        defeasance = "Divested automatically in favor of " + giftOver + " if " + def.display + ".";
+      } else if (def.kind === "durational") {
+        label = "Fee Simple Determinable";
+        rules.push("IF durational words (\u201c" + def.trigger + "\u201d) measure the fee AND the property reverts to the grantor THEN the present estate is a fee simple determinable.");
+        defeasance = "Terminates automatically and returns to " + g + " if " + def.display + ".";
+        grantorRetains.push({
+          label: "Possibility of Reverter",
+          category: "grantor",
+          conditions: [def],
+          rules: [
+            "IF the grantor creates a fee simple determinable THEN the grantor automatically retains a possibility of reverter.",
+            "IF the stated limitation occurs THEN title revests in the grantor by operation of law, with no action required."
+          ]
+        });
+      } else {
+        label = "Fee Simple Subject to Condition Subsequent";
+        rules.push("IF conditional words (\u201c" + def.trigger + "\u201d) are used AND the grantor reserves the ability to retake THEN the present estate is a fee simple subject to a condition subsequent.");
+        defeasance = "Not automatic \u2014 " + g + " must act to retake if " + def.display + ".";
+        grantorRetains.push({
+          label: "Right of Entry (Power of Termination)",
+          category: "grantor",
+          conditions: [def],
+          rules: [
+            "IF the grantor creates a fee simple subject to a condition subsequent THEN the grantor retains a right of entry.",
+            "IF the condition occurs THEN the estate continues until the grantor affirmatively exercises the power of termination."
+          ]
+        });
+      }
+      interests.push(mk(t.party, label, "present", rules, t.conditions, defeasance));
+      return;
+    }
+
+    // ---------- future interests in the main line ----------
+    var priorIsFreeholdLess = prior && (prior.duration === "life" || prior.duration === "years");
+    var priorDefeasible = prior && firstDefeasance(prior) !== null && prior.duration === "fee";
+    var naturalOnly = pre && isNaturalTermination(pre, prior);
+    var realPrecedent = pre && !naturalOnly;
+    var contingentBecause = [];
+
+    if (realPrecedent) contingentBecause.push("an express condition precedent (\u201c" + pre.display + "\u201d) must be satisfied first");
+    if (t.isHeirsOrIssue) contingentBecause.push("the taker is unascertained (a living person has no heirs)");
+
+    if (priorDefeasible) {
+      label = "Shifting Executory Interest";
+      rules.push("IF the preceding estate is a defeasible FEE SIMPLE THEN the following interest cannot be a remainder (a remainder never follows a fee).");
+      rules.push("IF the interest divests another TRANSFEREE when the stated limitation occurs THEN it is a shifting executory interest.");
+      defeasance = "Never becomes possessory if " + (firstDefeasance(prior) ? firstDefeasance(prior).display : "the condition") + " never occurs.";
+      interests.push(mk(t.party, label, "future", rules, t.conditions, defeasance));
+      return;
+    }
+
+    if (priorIsFreeholdLess && (t.gapAfter || (pre && pre.gap))) {
+      var gapText = t.gapAfter || pre.text;
+      label = "Springing Executory Interest";
+      rules.push("IF a gap in possession (\u201c" + gapText + "\u201d) separates the natural end of the prior estate from this gift THEN the grantor retakes possession during the interval.");
+      rules.push("IF a future interest in a transferee must wait through that gap THEN it cannot be a remainder (a remainder takes immediately on the prior estate's expiration); it is a springing executory interest that divests the grantor.");
+      grantorRetains.push({
+        label: "Reversion",
+        category: "grantor",
+        conditions: [],
+        rules: ["IF possession returns to the grantor in the interval between two estates THEN the grantor holds a reversion for that period, which is then divested by the springing interest."]
+      });
+      interests.push(mk(t.party, label, "future", rules, t.conditions, "Divests " + g + " when the waiting period elapses."));
+      return;
+    }
+
+    if (priorIsFreeholdLess) {
+      rules.push("IF a future interest in a TRANSFEREE is capable of becoming possessory at the natural expiration of the prior " + (prior.duration === "life" ? "life estate" : "term of years") + " THEN it is a remainder.");
+
+      if (t.isClass && !t.isHeirsOrIssue) {
+        label = "Class Gift Remainder \u2014 Vested Subject to Open (contingent while no member qualifies)";
+        rules.push("IF the remainder runs to a class (\u201c" + t.party + "\u201d) AND at least one member is ascertained and qualified THEN the remainder is vested subject to open, because later-born members can still share.");
+        rules.push("IF no class member is yet ascertained THEN the remainder is contingent and " + g + " holds a reversion.");
+        grantorRetains.push({
+          label: "Reversion",
+          category: "grantor",
+          conditions: [],
+          rules: ["IF a remainder may be contingent (no qualifying class member yet) THEN the grantor retains a reversion in case it never vests."]
+        });
+        interests.push(mk(t.party, label, "future", rules, t.conditions, "Shares shrink as the class opens; fails entirely if no member ever qualifies."));
+        return;
+      }
+
+      if (contingentBecause.length) {
+        label = "Contingent Remainder" + (t.duration === "life" ? " for Life" : " in Fee Simple");
+        rules.push("IF the remainder is subject to a condition precedent OR the taker is unascertained THEN it is a contingent remainder. Here, " + contingentBecause.join(" and ") + ".");
+        rules.push("IF a contingent remainder exists THEN the grantor retains a reversion in case it never vests.");
+        grantorRetains.push({
+          label: "Reversion",
+          category: "grantor",
+          conditions: [],
+          rules: ["IF any remainder is contingent THEN the grantor keeps a reversion to cover the possibility that it fails."]
+        });
+        defeasance = "Fails if " + (realPrecedent ? pre.display : "the taker is never ascertained") + ".";
+        interests.push(mk(t.party, label, "future", rules, t.conditions, defeasance));
+        return;
+      }
+
+      // vested
+      if (def && giftOver && !giftOverToGrantor) {
+        label = "Vested Remainder" + (t.duration === "life" ? " for Life" : " in Fee Simple") + " Subject to Executory Limitation";
+        rules.push("IF the taker is ascertained AND no condition precedent exists THEN the remainder is vested.");
+        rules.push("IF a vested remainder can later be divested in favor of a THIRD PARTY THEN it is a vested remainder subject to an executory limitation (subject to total divestment).");
+        defeasance = "Divested in favor of " + giftOver + " if " + def.display + ".";
+      } else if (def) {
+        label = "Vested Remainder Subject to Divestment";
+        rules.push("IF the taker is ascertained AND no condition precedent exists THEN the remainder is vested.");
+        rules.push("IF a condition subsequent can cut the vested remainder short in favor of the grantor THEN it is subject to divestment, and " + g + " holds the correlative future interest.");
+        grantorRetains.push({
+          label: def.kind === "durational" ? "Possibility of Reverter" : "Right of Entry (Power of Termination)",
+          category: "grantor",
+          conditions: [def],
+          rules: ["IF the divesting condition sends the property back to the grantor THEN the grantor holds " + (def.kind === "durational" ? "a possibility of reverter (automatic)" : "a right of entry (must be exercised)") + "."]
+        });
+        defeasance = "Divested if " + def.display + ".";
+      } else {
+        label = "Vested Remainder" + (t.duration === "life" ? " for Life" : " in Fee Simple Absolute");
+        rules.push("IF the taker is ascertained AND no condition precedent attaches THEN the remainder is indefeasibly vested.");
+        if (naturalOnly) rules.push("IF the only stated trigger is the natural end of the prior estate (\u201c" + pre.display + "\u201d) THEN it is NOT a condition precedent \u2014 it merely states when possession begins.");
+        defeasance = t.duration === "life" ? "Ends at the remainderman's death." : "Nothing \u2014 the remainder is indefeasibly vested.";
+      }
+      interests.push(mk(t.party, label, "future", rules, t.conditions, defeasance));
+      return;
+    }
+
+    // Prior taker already held an absolute fee: a later gift is doctrinally impossible.
+    notes.push("A gift to " + t.party + " follows an unlimited fee simple in " + prior.party + "; at common law nothing can follow a fee simple absolute. Treated as an executory interest, but the conveyance is probably ambiguous.");
+    interests.push(mk(t.party, "Shifting Executory Interest (ambiguous)", "future",
+      ["IF an interest purports to follow a fee simple THEN it cannot be a remainder; it is classified as an executory interest."],
+      t.conditions, "Depends on the preceding fee being cut short."));
+  });
+
+  // ---------- gift-over takers (executory interests) ----------
+  takers.filter(function (t) { return t.role === "giftOver"; }).forEach(function (t) {
+    var cond = t.condition;
+    var divested = takers[t.divests];
+    if (t.party.toLowerCase() === g.toLowerCase()) {
+      grantorRetains.push({
+        label: cond.kind === "durational" ? "Possibility of Reverter" : "Right of Entry (Power of Termination)",
+        category: "grantor",
+        conditions: [cond],
+        rules: ["IF the gift over runs back to the GRANTOR THEN it is a reversionary interest, not an executory interest: " +
+          (cond.kind === "durational" ? "a possibility of reverter, which operates automatically." : "a right of entry, which must be exercised.")]
+      });
+      return;
+    }
+    var rules = [
+      "IF an interest in a THIRD PARTY cuts short a prior TRANSFEREE's estate (" + (divested ? divested.party + "'s" : "the prior") + " interest) THEN it is a shifting executory interest.",
+      "IF the trigger is a condition (\u201c" + cond.display + "\u201d) rather than the natural expiration of the prior estate THEN the interest cannot be a remainder."
+    ];
+    if (cond.negative) rules.push("IF the condition is stated negatively THEN the interest vests only on NON-occurrence of the described event, which can leave it open indefinitely.");
+    interests.push(mk(t.party, "Shifting Executory Interest", "future", rules, [cond],
+      "Becomes possessory only if " + cond.display + "; otherwise it never vests."));
+  });
+
+  // ---------- grantor's residual reversion ----------
+  var last = mainLine[mainLine.length - 1];
+  var lineEndsShort = last && (last.duration === "life" || last.duration === "years");
+  if (lineEndsShort) {
+    grantorRetains.push({
+      label: "Reversion",
+      category: "grantor",
+      conditions: [],
+      rules: [
+        "IF the grantor conveys less than the whole estate (the last interest in the chain is only a " + last.durationLabel + ") THEN the grantor retains a reversion.",
+        "IF all prior estates end THEN possession returns to " + g + " automatically."
+      ]
+    });
+  }
+
+  // Merge duplicate grantor interests.
+  var seen = {};
+  grantorRetains.forEach(function (gi) {
+    var key = gi.label.replace(/\s*\(.*?\)\s*/g, "").toLowerCase();
+    if (seen[key]) return;
+    seen[key] = true;
+    interests.push(mk(g, gi.label, "grantor", gi.rules, gi.conditions || [], null));
+  });
+
+  // ---------- advisory RAP flag ----------
+  interests.forEach(function (i) {
+    if (!/executory interest|contingent remainder|subject to open/i.test(i.label)) return;
+    var open = i.conditions.some(function (c) { return c && !c.timeBased; }) || i.conditions.length === 0;
+    if (open && /executory interest|contingent remainder/i.test(i.label)) {
+      i.rapFlag = "Common-law RAP check: this interest is contingent and the triggering event has no built-in time limit, so it may vest (if at all) more than 21 years after a life in being. Verify \u2014 an open-ended executory interest is classically void, which would leave the prior estate absolute.";
+    }
+  });
+
+  return { grantor: g, interests: interests, notes: notes, takers: takers, trace: parsed.trace, text: parsed.text };
+}
+
+function mk(party, label, category, rules, conditions, defeasance) {
+  return {
+    party: party,
+    label: label,
+    category: category,
+    rules: rules || [],
+    conditions: (conditions || []).filter(Boolean),
+    defeasance: defeasance || null
+  };
+}
+
+function analyzeConveyance(raw, grantorField) {
+  try {
+    return { ok: true, result: classify(parseConveyance(raw, grantorField)) };
+  } catch (e) {
+    return { ok: false, error: e.message };
+  }
+}
+
+/* ------------------------------------------------------------------ *
+ * 4. TEST CORPUS                                                      *
+ * ------------------------------------------------------------------ */
+
+var TEST_CASES = [
+  { q: "O to A for life, then to B and her heirs, but if B drinks alcohol, to C.",
+    e: { A: "Life Estate", B: "Vested Remainder in Fee Simple Subject to Executory Limitation", C: "Shifting Executory Interest" } },
+  { q: "O to A and his heirs.", e: { A: "Fee Simple Absolute" } },
+  { q: "O to A so long as the land is used as a farm.",
+    e: { A: "Fee Simple Determinable", O: "Possibility of Reverter" } },
+  { q: "O to A, but if the land is not used as a farm, O may re-enter.",
+    e: { A: "Fee Simple Subject to Condition Subsequent", O: "Right of Entry (Power of Termination)" } },
+  { q: "O to A so long as no alcohol is served, then to B.",
+    e: { A: "Fee Simple Subject to Executory Limitation", B: "Shifting Executory Interest" } },
+  { q: "O to A for life, then to B.",
+    e: { A: "Life Estate", B: "Vested Remainder in Fee Simple Absolute" } },
+  { q: "O to A for life, then to B if B reaches 21.",
+    e: { A: "Life Estate", B: "Contingent Remainder in Fee Simple", O: "Reversion" } },
+  { q: "O to A for life.", e: { A: "Life Estate", O: "Reversion" } },
+  { q: "O to A when A turns 21.",
+    e: { A: "Springing Executory Interest in Fee Simple", O: "Fee Simple Subject to Executory Limitation (present possession)" } },
+  { q: "O to A for life, but if A remarries, to B.",
+    e: { A: "Life Estate Subject to Executory Limitation", B: "Shifting Executory Interest", O: "Reversion" } },
+  { q: "O to A for life, then to B and her heirs, but if B fails to graduate from law school or B moves abroad, to C and his heirs.",
+    e: { A: "Life Estate", B: "Vested Remainder in Fee Simple Subject to Executory Limitation", C: "Shifting Executory Interest" } },
+  { q: "O to A for life, then to A's children.",
+    e: { A: "Life Estate" } },
+  { q: "O to A for life, then to B upon A's death.",
+    e: { A: "Life Estate", B: "Vested Remainder in Fee Simple Absolute" } },
+  { q: "O to A for life, then to B unless B has sold the family home, in which case to C.",
+    e: { A: "Life Estate", B: "Vested Remainder in Fee Simple Subject to Executory Limitation", C: "Shifting Executory Interest" } },
+  { q: "To A for life, then to the heirs of B.",
+    e: { A: "Life Estate", "the heirs of B": "Contingent Remainder in Fee Simple", O: "Reversion" } },
+  { q: "O to A for life, then five years after A's death to B.",
+    e: { A: "Life Estate", B: "Springing Executory Interest", O: "Reversion" } },
+  { q: "O to A and his heirs, but if A dies without issue, to B and his heirs.",
+    e: { A: "Fee Simple Subject to Executory Limitation", B: "Shifting Executory Interest" } },
+  { q: "O to A for life, then to B for life, then to C and her heirs.",
+    e: { A: "Life Estate", B: "Vested Remainder for Life", C: "Vested Remainder in Fee Simple Absolute" } },
+  { q: "O to A for 10 years, then to B.",
+    e: { A: "Term of Years", B: "Vested Remainder in Fee Simple Absolute" } },
+  { q: "O to the American Red Cross so long as the premises are used for charitable purposes.",
+    e: { "the American Red Cross": "Fee Simple Determinable", O: "Possibility of Reverter" } }
+];
+
+function runTests() {
+  return TEST_CASES.map(function (tc) {
+    var out = analyzeConveyance(tc.q, "O");
+    var rows = [];
+    var allPass = true;
+    if (!out.ok) {
+      allPass = false;
+      rows.push({ party: "\u2014", want: "(parse)", got: "ERROR: " + out.error, pass: false });
+    } else {
+      Object.keys(tc.e).forEach(function (party) {
+        var found = out.result.interests.filter(function (i) { return i.party === party; });
+        var got = found.map(function (i) { return i.label; }).join(" | ") || "(none)";
+        var pass = found.some(function (i) { return i.label === tc.e[party]; });
+        if (!pass) allPass = false;
+        rows.push({ party: party, want: tc.e[party], got: got, pass: pass });
+      });
+    }
+    return { q: tc.q, rows: rows, pass: allPass, out: out };
+  });
+}
+
+/* ===== ENGINE END ===== */
+
+/* ------------------------------------------------------------------ *
+ * 5. UI                                                               *
+ * ------------------------------------------------------------------ */
+
+var EXAMPLES = [
+  "O to A for life, then to B and her heirs, but if B drinks alcohol, to C.",
+  "O to A so long as the premises are used as a library, then to B.",
+  "O to A and his heirs, but if A sells liquor on the land, O may re-enter.",
+  "O to A for life, then to B if B survives A and B graduates from college.",
+  "O to A for life, then to B, but if B divorces or B moves abroad, to C and his heirs.",
+  "O to A when A turns 21.",
+  "O to A for life, then to A's children.",
+  "O to A for life, then five years after A's death to B."
+];
+
+function esc(s) {
+  return String(s).replace(/[&<>\"']/g, function (c) {
+    return ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c];
+  });
+}
+
+function renderExamples() {
+  document.getElementById("exampleList").innerHTML = EXAMPLES.map(function (e, i) {
+    return '<button class="ex" data-i="' + i + '">' + esc(e) + "</button>";
+  }).join("");
+  Array.prototype.forEach.call(document.querySelectorAll(".ex"), function (b) {
+    b.addEventListener("click", function () {
+      document.getElementById("deed").value = EXAMPLES[+b.dataset.i];
+      runAnalysis();
+    });
+  });
+}
+
+function chipsFor(conds) {
+  var out = "";
+  (conds || []).forEach(function (c) {
+    if (!c || !c.text) return;
+    out += '<span class="chip cond">' + esc(c.kind) + ": " + esc(describeTree(c.tree) || c.text) + "</span>";
+    if (c.timeBased) out += '<span class="chip time">time-based</span>';
+    if (c.negative) out += '<span class="chip neg">negative condition</span>';
+  });
+  return out;
+}
+
+function runAnalysis() {
+  var deed = document.getElementById("deed").value;
+  var grantor = document.getElementById("grantor").value;
+  var out = document.getElementById("out");
+  var res = analyzeConveyance(deed, grantor);
+
+  if (!res.ok) {
+    out.innerHTML = '<div class="panel err"><strong>Cannot parse:</strong> ' + esc(res.error) + "</div>";
+    document.getElementById("rapOut").innerHTML = "";
+    return;
+  }
+  var r = res.result;
+  var order = { present: 0, future: 1, grantor: 2 };
+  var sorted = r.interests.slice().sort(function (a, b) { return order[a.category] - order[b.category]; });
+
+  var html = '<div class="panel">';
+  html += "<h2 style=\"font-size:1.2rem;margin-bottom:10px;\">Breakdown of interests</h2>";
+  html += '<div class="timeline"><strong>Conveyance read as:</strong> ' + esc(r.text) + "</div>";
+
+  sorted.forEach(function (i) {
+    html += '<div class="card ' + i.category + '">';
+    html += '<div class="kind">' + (i.category === "present" ? "Present possessory estate" : i.category === "future" ? "Future interest" : "Retained by the grantor") + "</div>";
+    html += "<h3>" + esc(i.party) + "</h3>";
+    html += '<div class="label">' + esc(i.label) + "</div>";
+    html += '<div class="why"><strong>Reasoning:</strong><ul>' + i.rules.map(function (x) { return "<li>" + esc(x) + "</li>"; }).join("") + "</ul></div>";
+    if (i.defeasance) html += '<div class="meta"><strong>What ends or defeats it:</strong> ' + esc(i.defeasance) + "</div>";
+    var ch = chipsFor(i.conditions);
+    if (ch) html += "<div>" + ch + "</div>";
+    if (i.rapFlag) html += '<div class="note">' + esc(i.rapFlag) + "</div>";
+    html += "</div>";
+  });
+
+  r.notes.forEach(function (n) { html += '<div class="note">' + esc(n) + "</div>"; });
+
+  html += "<details><summary>Show parse trace (how the engine read the text)</summary><pre>" +
+          esc(JSON.stringify(r.trace, null, 2)) + "</pre></details>";
+  html += "</div>";
+  out.innerHTML = html;
+  requestRapResearch(deed, r);
+}
+
+function clearAll() {
+  document.getElementById("deed").value = "";
+  document.getElementById("out").innerHTML = "";
+  document.getElementById("rapOut").innerHTML = "";
+}
+
+function toggleTests() {
+  var p = document.getElementById("testPanel");
+  p.classList.toggle("hidden");
+  if (p.classList.contains("hidden")) return;
+  var results = runTests();
+  var passed = results.filter(function (r) { return r.pass; }).length;
+  var html = "<p><strong>" + passed + " / " + results.length + "</strong> canonical conveyances classified as expected.</p>";
+  html += '<table class="tests"><tr><th>Conveyance</th><th>Party</th><th>Expected</th><th>Engine output</th><th></th></tr>';
+  results.forEach(function (r) {
+    r.rows.forEach(function (row, idx) {
+      html += "<tr>";
+      if (idx === 0) html += '<td rowspan="' + r.rows.length + '">' + esc(r.q) + "</td>";
+      html += "<td>" + esc(row.party) + "</td><td>" + esc(row.want) + "</td><td>" + esc(row.got) + "</td>";
+      html += '<td class="' + (row.pass ? "pass" : "fail") + '">' + (row.pass ? "pass" : "FAIL") + "</td></tr>";
+    });
+  });
+  html += "</table>";
+  document.getElementById("testResults").innerHTML = html;
+}
+
+renderExamples();
+runAnalysis();
+</script>
+</body>
+</html>
